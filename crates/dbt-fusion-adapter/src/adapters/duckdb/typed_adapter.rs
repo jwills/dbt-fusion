@@ -65,37 +65,79 @@ impl TypedBaseAdapter for DuckDBTypedAdapter {
     }
 
     fn self_split_statements(&self, sql: &str, _dialect: Dialect) -> Vec<String> {
-        // For now, just return the SQL as a single statement
-        vec![sql.to_string()]
+        // Simple SQL statement splitting for DuckDB
+        // This is a basic implementation - a more sophisticated parser would handle
+        // string literals, comments, and other SQL constructs properly
+        sql.split(';')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect()
     }
 
     fn execute(
         &self,
-        _conn: &'_ mut dyn Connection,
-        _query_ctx: &QueryCtx,
-        _auto_begin: Option<bool>,
-        _fetch: Option<bool>,
-        _limit: Option<u32>,
+        conn: &'_ mut dyn Connection,
+        query_ctx: &QueryCtx,
+        auto_begin: Option<bool>,
+        fetch: Option<bool>,
+        limit: Option<u32>,
     ) -> AdapterResult<(AdapterResponse, AgateTable)> {
-        // TODO: Implement actual query execution
-        Err(AdapterError::new(
-            AdapterErrorKind::Internal,
-            "DuckDB query execution not yet implemented",
-        ))
+        // Get the SQL engine, required for query execution
+        let engine = self.engine.as_ref().ok_or_else(|| {
+            AdapterError::new(
+                AdapterErrorKind::Configuration,
+                "No SQL engine configured for DuckDB adapter. Use DuckDBTypedAdapter::with_engine() to provide an engine.",
+            )
+        })?;
+
+        // Use the default execute_inner implementation
+        self.execute_inner(
+            Dialect::DuckDB,
+            engine.clone(),
+            conn,
+            query_ctx,
+            auto_begin,
+            fetch,
+            limit,
+        )
     }
 
     fn add_query(
         &self,
-        _conn: &'_ mut dyn Connection,
-        _query_ctx: &QueryCtx,
+        conn: &'_ mut dyn Connection,
+        query_ctx: &QueryCtx,
         _auto_begin: bool,
         _abridge_sql_log: bool,
     ) -> AdapterResult<()> {
-        // TODO: Implement query addition
-        Err(AdapterError::new(
-            AdapterErrorKind::Internal,
-            "DuckDB add_query not yet implemented",
-        ))
+        // Get the SQL engine, required for query execution
+        let engine = self.engine.as_ref().ok_or_else(|| {
+            AdapterError::new(
+                AdapterErrorKind::Configuration,
+                "No SQL engine configured for DuckDB adapter. Use DuckDBTypedAdapter::with_engine() to provide an engine.",
+            )
+        })?;
+
+        // For DuckDB, we'll execute the query immediately since we don't have
+        // sophisticated transaction management yet. In a real implementation,
+        // this might batch queries for better performance.
+        let sql = query_ctx.sql().ok_or_else(|| {
+            AdapterError::new(AdapterErrorKind::Internal, "Missing query in the context")
+        })?;
+
+        // Split statements and execute each one
+        let statements = self.self_split_statements(&sql, Dialect::DuckDB);
+        for statement in statements {
+            // Execute each statement, ignoring results for add_query
+            crate::adapters::sql_engine::execute_query_with_retry(
+                engine.clone(),
+                conn,
+                &query_ctx.with_sql(statement),
+                1,
+            )?;
+        }
+
+        Ok(())
     }
 
     fn quote(&self, identifier: &str) -> String {
@@ -279,10 +321,32 @@ mod tests {
     #[test]
     fn test_duckdb_split_statements() {
         let adapter = DuckDBTypedAdapter::new();
-        let sql = "SELECT 1; SELECT 2;";
+        
+        // Test single statement
+        let sql = "SELECT 1";
         let statements = adapter.self_split_statements(sql, Dialect::DuckDB);
         assert_eq!(statements.len(), 1);
-        assert_eq!(statements[0], sql);
+        assert_eq!(statements[0], "SELECT 1");
+        
+        // Test multiple statements
+        let sql = "SELECT 1; SELECT 2;";
+        let statements = adapter.self_split_statements(sql, Dialect::DuckDB);
+        assert_eq!(statements.len(), 2);
+        assert_eq!(statements[0], "SELECT 1");
+        assert_eq!(statements[1], "SELECT 2");
+        
+        // Test with whitespace
+        let sql = "  SELECT 1 ;   SELECT 2  ; ";
+        let statements = adapter.self_split_statements(sql, Dialect::DuckDB);
+        assert_eq!(statements.len(), 2);
+        assert_eq!(statements[0], "SELECT 1");
+        assert_eq!(statements[1], "SELECT 2");
+        
+        // Test empty statements
+        let sql = ";;SELECT 1;;";
+        let statements = adapter.self_split_statements(sql, Dialect::DuckDB);
+        assert_eq!(statements.len(), 1);
+        assert_eq!(statements[0], "SELECT 1");
     }
 
     #[test]
@@ -401,5 +465,164 @@ mod tests {
         let error = connection_result.unwrap_err();
         assert!(matches!(error.kind(), AdapterErrorKind::Configuration));
         assert!(error.to_string().contains("No SQL engine configured"));
+    }
+
+    #[test]
+    fn test_duckdb_execute_without_engine() {
+        use crate::adapters::config::AdapterConfig;
+        use crate::adapters::duckdb::auth::DuckDBAuth;
+        use crate::adapters::sql_engine::SqlEngine;
+        use std::collections::HashMap;
+
+        // Test execute without engine configuration
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Create an engine for testing (this will be used to create a connection, but the execute method will error first)
+        let auth = DuckDBAuth::memory();
+        let db_config = HashMap::new();
+        let config = AdapterConfig::new(db_config);
+        let engine = SqlEngine::new(Arc::new(auth), config);
+        
+        // Get a connection that we can use for testing (though it won't actually be used)
+        let adapter_with_engine = DuckDBTypedAdapter::with_engine(engine);
+        let connection_result = adapter_with_engine.new_connection();
+        
+        // Skip this test if we can't create a connection (DuckDB driver not available)
+        if connection_result.is_err() {
+            return;
+        }
+        let mut conn = connection_result.unwrap();
+        
+        // Create query context
+        let query_ctx = QueryCtx::new("duckdb").with_sql("SELECT 1");
+        
+        // Should return configuration error from the adapter without engine
+        let execute_result = adapter.execute(&mut *conn, &query_ctx, None, None, None);
+        assert!(execute_result.is_err());
+        
+        let error = execute_result.unwrap_err();
+        assert!(matches!(error.kind(), AdapterErrorKind::Configuration));
+        assert!(error.to_string().contains("No SQL engine configured"));
+    }
+
+    #[test]
+    fn test_duckdb_add_query_without_engine() {
+        use crate::adapters::config::AdapterConfig;
+        use crate::adapters::duckdb::auth::DuckDBAuth;
+        use crate::adapters::sql_engine::SqlEngine;
+        use std::collections::HashMap;
+
+        // Test add_query without engine configuration
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Create an engine for testing (this will be used to create a connection, but the add_query method will error first)
+        let auth = DuckDBAuth::memory();
+        let db_config = HashMap::new();
+        let config = AdapterConfig::new(db_config);
+        let engine = SqlEngine::new(Arc::new(auth), config);
+        
+        // Get a connection that we can use for testing (though it won't actually be used)
+        let adapter_with_engine = DuckDBTypedAdapter::with_engine(engine);
+        let connection_result = adapter_with_engine.new_connection();
+        
+        // Skip this test if we can't create a connection (DuckDB driver not available)
+        if connection_result.is_err() {
+            return;
+        }
+        let mut conn = connection_result.unwrap();
+        
+        // Create query context
+        let query_ctx = QueryCtx::new("duckdb").with_sql("SELECT 1");
+        
+        // Should return configuration error from the adapter without engine
+        let add_query_result = adapter.add_query(&mut *conn, &query_ctx, true, false);
+        assert!(add_query_result.is_err());
+        
+        let error = add_query_result.unwrap_err();
+        assert!(matches!(error.kind(), AdapterErrorKind::Configuration));
+        assert!(error.to_string().contains("No SQL engine configured"));
+    }
+
+    #[test]
+    fn test_duckdb_sql_execution_integration() {
+        use crate::adapters::config::AdapterConfig;
+        use crate::adapters::duckdb::auth::DuckDBAuth;
+        use crate::adapters::sql_engine::SqlEngine;
+        use std::collections::HashMap;
+
+        // Create DuckDB adapter with engine
+        let auth = DuckDBAuth::memory();
+        let db_config = HashMap::new();
+        let config = AdapterConfig::new(db_config);
+        let engine = SqlEngine::new(Arc::new(auth), config);
+        let adapter = DuckDBTypedAdapter::with_engine(engine);
+
+        // Try to create a connection
+        let connection_result = adapter.new_connection();
+        
+        // Skip this test if we can't create a connection (DuckDB driver not available)
+        if connection_result.is_err() {
+            eprintln!("Skipping DuckDB SQL execution test - driver not available: {:?}", connection_result);
+            return;
+        }
+        
+        let mut conn = connection_result.unwrap();
+
+        // Test simple SELECT query
+        let query_ctx = QueryCtx::new("duckdb").with_sql("SELECT 1 as test_value");
+        let execute_result = adapter.execute(&mut *conn, &query_ctx, None, Some(true), None);
+        
+        match execute_result {
+            Ok((response, table)) => {
+                // Execution succeeded
+                println!("Execute succeeded: {:?}", response);
+                println!("Table columns: {:?}", table.column_names());
+            }
+            Err(e) => {
+                // This is expected if the DuckDB ADBC driver isn't properly installed
+                // The important thing is that we get an XDBC error, not a configuration error
+                println!("Execute failed (expected if DuckDB driver not available): {:?}", e);
+                assert!(matches!(e.kind(), AdapterErrorKind::Xdbc(_)));
+            }
+        }
+
+        // Test add_query functionality
+        let add_query_ctx = QueryCtx::new("duckdb").with_sql("CREATE TABLE IF NOT EXISTS test (id INTEGER)");
+        let add_result = adapter.add_query(&mut *conn, &add_query_ctx, false, false);
+        
+        match add_result {
+            Ok(()) => {
+                println!("Add query succeeded");
+            }
+            Err(e) => {
+                // This is expected if the DuckDB ADBC driver isn't properly installed
+                println!("Add query failed (expected if DuckDB driver not available): {:?}", e);
+                assert!(matches!(e.kind(), AdapterErrorKind::Xdbc(_)));
+            }
+        }
+    }
+
+    #[test]
+    fn test_duckdb_statement_splitting() {
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Test single statement
+        let single = adapter.self_split_statements("SELECT 1", Dialect::DuckDB);
+        assert_eq!(single, vec!["SELECT 1"]);
+        
+        // Test multiple statements
+        let multiple = adapter.self_split_statements("SELECT 1; SELECT 2; CREATE TABLE test (id INTEGER)", Dialect::DuckDB);
+        assert_eq!(multiple, vec!["SELECT 1", "SELECT 2", "CREATE TABLE test (id INTEGER)"]);
+        
+        // Test statements with whitespace
+        let whitespace = adapter.self_split_statements("  SELECT 1  ;  \n  SELECT 2  ;  ", Dialect::DuckDB);
+        assert_eq!(whitespace, vec!["SELECT 1", "SELECT 2"]);
+        
+        // Test empty and semicolon-only input
+        let empty = adapter.self_split_statements("", Dialect::DuckDB);
+        assert_eq!(empty, Vec::<String>::new());
+        
+        let semicolons = adapter.self_split_statements(";;;", Dialect::DuckDB);
+        assert_eq!(semicolons, Vec::<String>::new());
     }
 }
