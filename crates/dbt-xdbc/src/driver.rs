@@ -39,6 +39,8 @@ pub enum Backend {
     DatabricksODBC,
     /// Redshift driver implementation (ODBC).
     RedshiftODBC,
+    /// DuckDB driver implementation (ADBC).
+    DuckDB,
     /// Generic ADBC driver implementation.
     ///
     /// This variant is fully dynamic and experimental. Features might not work reliably and fail
@@ -64,6 +66,7 @@ impl Display for Backend {
             Backend::Databricks => write!(f, "Databricks"),
             Backend::DatabricksODBC => write!(f, "Databricks"),
             Backend::RedshiftODBC => write!(f, "Redshift"),
+            Backend::DuckDB => write!(f, "DuckDB"),
             Backend::Generic { library_name, .. } => write!(f, "Generic({})", library_name),
         }
     }
@@ -77,6 +80,7 @@ impl Backend {
             Backend::Postgres => Some("adbc_driver_postgresql"),
             Backend::Databricks => Some("adbc_driver_databricks"),
             Backend::DatabricksODBC | Backend::RedshiftODBC => None, // these use ODBC
+            Backend::DuckDB => Some("adbc_driver_duckdb"),
             Backend::Generic { library_name, .. } => Some(library_name),
         }
     }
@@ -84,6 +88,7 @@ impl Backend {
     pub fn adbc_driver_entrypoint(&self) -> Option<&'static [u8]> {
         match self {
             Backend::Snowflake => Some(b"SnowflakeDriverInit"),
+            Backend::DuckDB => Some(b"duckdb_adbc_init"),
             Backend::Generic {
                 library_name: _,
                 entrypoint,
@@ -100,6 +105,7 @@ impl Backend {
             Backend::Databricks => FFIProtocol::Adbc,
             Backend::DatabricksODBC => FFIProtocol::Odbc,
             Backend::RedshiftODBC => FFIProtocol::Odbc,
+            Backend::DuckDB => FFIProtocol::Adbc,
             Backend::Generic { .. } => FFIProtocol::Adbc,
         }
     }
@@ -248,7 +254,7 @@ impl AdbcDriver {
                 Self::try_load_driver_through_cdn_cache(backend, adbc_version)
             }
             // Drivers that are not published to the dbt Labs CDN.
-            Backend::Generic { .. } => Self::try_load_driver_from_name(
+            Backend::DuckDB | Backend::Generic { .. } => Self::try_load_driver_from_name(
                 backend.adbc_library_name().unwrap(),
                 backend.adbc_driver_entrypoint(),
                 adbc_version,
