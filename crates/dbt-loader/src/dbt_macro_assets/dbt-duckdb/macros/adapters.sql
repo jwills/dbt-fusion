@@ -1,0 +1,3 @@
+-- DuckDB adapter macros placeholder
+-- This file is required for the dbt-duckdb package to be recognized
+-- Actual adapter implementation is in the Rust code
