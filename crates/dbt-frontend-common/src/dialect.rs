@@ -40,6 +40,7 @@ pub enum Dialect {
     SparkLp,
     Redshift,
     Databricks,
+    DuckDB,
 }
 
 impl Display for Dialect {
@@ -55,6 +56,7 @@ impl Display for Dialect {
             Dialect::SparkLp => write!(f, "spark-lp"),
             Dialect::Redshift => write!(f, "redshift"),
             Dialect::Databricks => write!(f, "databricks"),
+            Dialect::DuckDB => write!(f, "duckdb"),
         }
     }
 }
@@ -76,6 +78,7 @@ impl FromStr for Dialect {
             "spark-lp" => Ok(Dialect::SparkLp),
             "redshift" => Ok(Dialect::Redshift),
             "databricks" => Ok(Dialect::Databricks),
+            "duckdb" => Ok(Dialect::DuckDB),
 
             // "passthrough" adapter type is used to disable most local semantic
             // analysis, so we just map it to the default dialect.
@@ -152,6 +155,7 @@ impl From<dbt_frontend_schemas::dialect::Dialect> for Dialect {
             dbt_frontend_schemas::dialect::Dialect::SparkLp => Self::SparkLp,
             dbt_frontend_schemas::dialect::Dialect::Redshift => Self::Redshift,
             dbt_frontend_schemas::dialect::Dialect::Databricks => Self::Databricks,
+            dbt_frontend_schemas::dialect::Dialect::DuckDB => Self::DuckDB,
         }
     }
 }
@@ -169,6 +173,7 @@ impl From<Dialect> for dbt_frontend_schemas::dialect::Dialect {
             Dialect::SparkLp => Self::SparkLp,
             Dialect::Redshift => Self::Redshift,
             Dialect::Databricks => Self::Databricks,
+            Dialect::DuckDB => Self::DuckDB,
         }
     }
 }

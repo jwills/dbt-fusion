@@ -28,6 +28,8 @@ pub enum Dialect {
     Redshift,
     #[serde(rename = "databricks")]
     Databricks,
+    #[serde(rename = "duckdb")]
+    DuckDB,
 }
 
 impl Display for Dialect {
@@ -42,6 +44,7 @@ impl Display for Dialect {
             Self::SparkLp => write!(f, "sparklp"),
             Self::Redshift => write!(f, "redshift"),
             Self::Databricks => write!(f, "databricks"),
+            Self::DuckDB => write!(f, "duckdb"),
             Self::Sdf => write!(f, "sdf"),
         }
     }
@@ -61,6 +64,7 @@ impl FromStr for Dialect {
             "sparklp" => Ok(Self::SparkLp),
             "redshift" => Ok(Self::Redshift),
             "databricks" => Ok(Self::Databricks),
+            "duckdb" => Ok(Self::DuckDB),
             "sdf" => Ok(Self::Sdf),
 
             // "passthrough" adapter type is used to disable most local semantic

@@ -27,6 +27,8 @@ pub enum AdapterType {
     Databricks,
     /// Redshift
     Redshift,
+    /// DuckDB
+    DuckDB,
 }
 
 impl From<AdapterType> for Dialect {
@@ -37,6 +39,7 @@ impl From<AdapterType> for Dialect {
             AdapterType::Bigquery => Dialect::Bigquery,
             AdapterType::Databricks => Dialect::Databricks,
             AdapterType::Redshift => Dialect::Redshift,
+            AdapterType::DuckDB => Dialect::DuckDB,
             AdapterType::Parse => unimplemented!("Parse adapter type is not supported"),
         }
     }
