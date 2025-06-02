@@ -307,4 +307,43 @@ mod tests {
         let result = adapter.convert_type_inner(&DataType::Utf8).unwrap();
         assert_eq!(result, "TEXT");
     }
+
+    #[test]
+    fn test_bridge_adapter_integration() {
+        use crate::adapters::bridge_adapter::BridgeAdapter;
+        use std::sync::Arc;
+
+        // Create DuckDB typed adapter
+        let typed_adapter = DuckDBTypedAdapter::new();
+        assert_eq!(typed_adapter.adapter_type(), AdapterType::DuckDB);
+
+        // Wrap it in BridgeAdapter
+        let bridge_adapter = BridgeAdapter::new(Arc::new(typed_adapter), None);
+        
+        // Verify BridgeAdapter correctly reports DuckDB adapter type
+        assert_eq!(bridge_adapter.adapter_type(), AdapterType::DuckDB);
+        
+        // Verify relation type is available
+        assert!(bridge_adapter.relation_type().is_some());
+        
+        // Verify engine is None (no engine set)
+        assert!(bridge_adapter.engine().is_none());
+        
+        // Verify Display formatting
+        assert_eq!(bridge_adapter.to_string(), "Adapter(duckdb)");
+    }
+
+    #[test]
+    fn test_relation_type_factory() {
+        use crate::adapters::bridge_adapter::relation_type_from_adapter_type;
+        
+        // Test that DuckDB adapter type returns the correct relation type
+        let relation_type = relation_type_from_adapter_type(AdapterType::DuckDB);
+        assert!(relation_type.is_some());
+        
+        // Verify it can be downcast to DuckDBRelationType
+        let value = relation_type.unwrap();
+        let duckdb_relation_type = value.downcast_object_ref::<DuckDBRelationType>();
+        assert!(duckdb_relation_type.is_some());
+    }
 }
