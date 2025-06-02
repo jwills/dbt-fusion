@@ -21,6 +21,8 @@ pub mod typed_adapter;
 pub mod bigquery;
 /// Databricks adapter
 pub mod databricks;
+/// DuckDB adapter
+pub mod duckdb;
 /// Metadata adapter
 pub mod metadata;
 /// Parse adapter
