@@ -55,11 +55,13 @@ impl fmt::Debug for DuckDBTypedAdapter {
 
 impl TypedBaseAdapter for DuckDBTypedAdapter {
     fn new_connection(&self) -> AdapterResult<Box<dyn Connection>> {
-        // TODO: Implement actual DuckDB connection
-        Err(AdapterError::new(
-            AdapterErrorKind::Internal,
-            "DuckDB connection not yet implemented",
-        ))
+        match &self.engine {
+            Some(engine) => engine.new_connection(),
+            None => Err(AdapterError::new(
+                AdapterErrorKind::Configuration,
+                "No SQL engine configured for DuckDB adapter. Use DuckDBTypedAdapter::with_engine() to provide an engine.",
+            )),
+        }
     }
 
     fn self_split_statements(&self, sql: &str, _dialect: Dialect) -> Vec<String> {
@@ -345,5 +347,59 @@ mod tests {
         let value = relation_type.unwrap();
         let duckdb_relation_type = value.downcast_object_ref::<DuckDBRelationType>();
         assert!(duckdb_relation_type.is_some());
+    }
+
+    #[test]
+    fn test_duckdb_connection_creation() {
+        use crate::adapters::config::AdapterConfig;
+        use crate::adapters::duckdb::auth::DuckDBAuth;
+        use crate::adapters::auth::Auth;
+        use crate::adapters::sql_engine::SqlEngine;
+        use std::collections::HashMap;
+
+        // Create DuckDB auth for in-memory database
+        let auth = DuckDBAuth::memory();
+        assert_eq!(auth.backend(), dbt_xdbc::Backend::DuckDB);
+
+        // Create adapter config
+        let mut db_config = HashMap::new();
+        db_config.insert("path".to_string(), serde_json::Value::String(":memory:".to_string()));
+        let config = AdapterConfig::new(db_config);
+
+        // Create SQL engine with auth and config
+        let engine = SqlEngine::new(Arc::new(auth), config);
+
+        // Create DuckDB adapter with engine
+        let adapter = DuckDBTypedAdapter::with_engine(engine);
+        assert_eq!(adapter.adapter_type(), AdapterType::DuckDB);
+        assert!(adapter.engine().is_some());
+
+        // Test that new_connection doesn't error (actual connection may fail without DuckDB driver)
+        // But the method should delegate properly to the engine
+        let connection_result = adapter.new_connection();
+        // We expect either success or a driver-level error, not a configuration error
+        match connection_result {
+            Ok(_) => {
+                // Connection succeeded - great!
+            }
+            Err(e) => {
+                // Should be a driver/XDBC error, not a configuration error
+                assert!(matches!(e.kind(), AdapterErrorKind::Xdbc(_)));
+            }
+        }
+    }
+
+    #[test]
+    fn test_duckdb_connection_without_engine() {
+        // Test adapter without engine configuration
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Should return configuration error
+        let connection_result = adapter.new_connection();
+        assert!(connection_result.is_err());
+        
+        let error = connection_result.unwrap_err();
+        assert!(matches!(error.kind(), AdapterErrorKind::Configuration));
+        assert!(error.to_string().contains("No SQL engine configured"));
     }
 }
