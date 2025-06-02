@@ -39,6 +39,7 @@ pub enum DbConfig {
     Bigquery(BigqueryDbConfig),
     Trino(TrinoDbConfig),
     Datafusion(DatafusionDbConfig),
+    Duckdb(DuckdbDbConfig),
     // SqlServer,
     // SingleStore,
     // Spark,
@@ -99,6 +100,7 @@ impl DbConfig {
             DbConfig::Bigquery(config) => serde_json::to_value(config).unwrap(),
             DbConfig::Trino(config) => serde_json::to_value(config).unwrap(),
             DbConfig::Datafusion(config) => serde_json::to_value(config).unwrap(),
+            DbConfig::Duckdb(config) => serde_json::to_value(config).unwrap(),
             DbConfig::Redshift(config) => serde_json::to_value(config).unwrap(),
             DbConfig::Databricks(config) => serde_json::to_value(config).unwrap(),
         }
@@ -112,6 +114,7 @@ impl DbConfig {
             DbConfig::Bigquery(..) => "bigquery".to_string(),
             DbConfig::Trino(..) => "trino".to_string(),
             DbConfig::Datafusion(..) => "datafusion".to_string(),
+            DbConfig::Duckdb(..) => "duckdb".to_string(),
             DbConfig::Databricks(..) => "databricks".to_string(),
         }
     }
@@ -124,6 +127,7 @@ impl DbConfig {
             DbConfig::Bigquery(config) => config.database.clone(),
             DbConfig::Trino(config) => config.database.clone(),
             DbConfig::Datafusion(config) => config.database.clone(),
+            DbConfig::Duckdb(config) => config.database.clone(),
             DbConfig::Databricks(config) => config.database.clone(),
         }
     }
@@ -136,6 +140,7 @@ impl DbConfig {
             DbConfig::Trino(config) => config.schema.clone(),
             DbConfig::Bigquery(config) => config.schema.clone(),
             DbConfig::Datafusion(config) => config.schema.clone(),
+            DbConfig::Duckdb(config) => config.schema.clone(),
             DbConfig::Databricks(config) => config.schema.clone(),
         }
     }
@@ -148,6 +153,7 @@ impl DbConfig {
             DbConfig::Redshift(config) => config.threads.clone(),
             DbConfig::Postgres(config) => config.threads.clone(),
             DbConfig::Trino(config) => config.threads.clone(),
+            DbConfig::Duckdb(config) => config.threads.clone(),
             _ => None,
         }
     }
@@ -160,6 +166,7 @@ impl DbConfig {
             DbConfig::Bigquery(config) => config.threads = threads,
             DbConfig::Trino(config) => config.threads = threads,
             DbConfig::Redshift(config) => config.threads = threads,
+            DbConfig::Duckdb(config) => config.threads = threads,
             _ => (),
         }
     }
@@ -309,6 +316,7 @@ impl DbConfig {
             DbConfig::Bigquery(config) => config.ignored_properties.clone(),
             DbConfig::Trino(config) => config.ignored_properties.clone(),
             DbConfig::Datafusion(config) => config.ignored_properties.clone(),
+            DbConfig::Duckdb(config) => config.ignored_properties.clone(),
             DbConfig::Redshift(config) => config.ignored_properties.clone(),
             DbConfig::Databricks(config) => config.ignored_properties.clone(),
         }
@@ -321,6 +329,7 @@ impl DbConfig {
             DbConfig::Bigquery(config) => config.database.clone(),
             DbConfig::Trino(config) => config.host.clone(),
             DbConfig::Datafusion(config) => config.database.clone(),
+            DbConfig::Duckdb(config) => config.path.clone(),
             DbConfig::Redshift(config) => config.host.clone(),
             DbConfig::Databricks(config) => config.host.clone(),
         }
@@ -596,6 +605,29 @@ pub struct DatabricksDbConfig {
     pub ignored_properties: HashMap<String, serde_json::Value>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct DuckdbDbConfig {
+    // Core DuckDB configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>, // Database file path or ":memory:" for in-memory
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub database: Option<String>, // Database name within file (for multiple databases)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>, // Schema name, defaults to "main"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub threads: Option<StringOrInteger>, // Number of threads
+    
+    // Performance configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_limit: Option<String>, // e.g. "1GB", "512MB"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temp_directory: Option<String>, // Temporary directory for operations
+    
+    // Catch-all for additional properties
+    #[serde(flatten)]
+    pub ignored_properties: HashMap<String, serde_json::Value>,
+}
+
 fn default_databricks_database() -> Option<String> {
     Some(DEFAULT_DATABRICKS_DATABASE.to_string())
 }
@@ -607,6 +639,7 @@ pub enum TargetContext {
     Snowflake(SnowflakeTargetEnv),
     Trino(TrinoTargetEnv),
     Datafusion(DatafusionTargetEnv),
+    Duckdb(DuckdbTargetEnv),
     Postgres(PostgresTargetEnv),
     Bigquery(BigqueryTargetEnv),
     Databricks(DatabricksTargetEnv),
@@ -625,6 +658,14 @@ pub struct TrinoTargetEnv {
 #[serde(rename_all = "snake_case")]
 pub struct DatafusionTargetEnv {
     pub database: String,
+    #[serde(flatten)]
+    pub common: CommonTargetContext,
+}
+
+#[derive(Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct DuckdbTargetEnv {
+    pub path: String,
     #[serde(flatten)]
     pub common: CommonTargetContext,
 }
@@ -800,6 +841,19 @@ impl TryFrom<DbConfig> for TargetContext {
                     common: CommonTargetContext {
                         database,
                         schema: config.schema.ok_or_else(|| missing("schema"))?,
+                        type_: adapter_type,
+                        threads: None,
+                    },
+                }))
+            }
+
+            DbConfig::Duckdb(config) => {
+                let database = config.database.clone().unwrap_or_else(|| "main".to_string());
+                Ok(TargetContext::Duckdb(DuckdbTargetEnv {
+                    path: config.path.clone().unwrap_or_else(|| ":memory:".to_string()),
+                    common: CommonTargetContext {
+                        database,
+                        schema: config.schema.unwrap_or_else(|| "main".to_string()),
                         type_: adapter_type,
                         threads: None,
                     },
