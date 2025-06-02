@@ -370,9 +370,28 @@ impl TypedBaseAdapter for DuckDBTypedAdapter {
     }
 
 
-    fn arrow_schema_to_dbt_columns(&self, _schema: Arc<Schema>) -> AdapterResult<Vec<Value>> {
-        // TODO: Implement Arrow schema to dbt columns conversion
-        Ok(vec![])
+    fn arrow_schema_to_dbt_columns(&self, schema: Arc<Schema>) -> AdapterResult<Vec<Value>> {
+        // Convert Arrow schema to dbt columns
+        let mut columns = Vec::new();
+        
+        for field in schema.fields() {
+            // Convert Arrow DataType to DuckDB SQL type
+            let duckdb_type = self.convert_type_inner(field.data_type())?;
+            
+            // Create a StdColumn for each field
+            let column = dbt_schemas::schemas::columns::base::StdColumn {
+                name: field.name().clone(),
+                dtype: duckdb_type,
+                char_size: None, // Could be enhanced to extract from string types
+                numeric_precision: None, // Could be enhanced to extract from decimal types  
+                numeric_scale: None, // Could be enhanced to extract from decimal types
+            };
+            
+            // Convert to Value and add to result
+            columns.push(Value::from_object(column));
+        }
+        
+        Ok(columns)
     }
 
     fn truncate_relation(
@@ -405,9 +424,109 @@ impl TypedBaseAdapter for DuckDBTypedAdapter {
         }
     }
 
-    fn convert_type_inner(&self, _data_type: &DataType) -> AdapterResult<String> {
-        // TODO: Implement Arrow DataType to DuckDB SQL type conversion
-        Ok("TEXT".to_string()) // Default to TEXT for now
+    fn convert_type_inner(&self, data_type: &DataType) -> AdapterResult<String> {
+        // Convert Arrow DataType to DuckDB SQL type
+        let duckdb_type = match data_type {
+            // Boolean types
+            DataType::Boolean => "BOOLEAN",
+            
+            // Integer types
+            DataType::Int8 => "TINYINT",
+            DataType::Int16 => "SMALLINT", 
+            DataType::Int32 => "INTEGER",
+            DataType::Int64 => "BIGINT",
+            DataType::UInt8 => "UTINYINT",
+            DataType::UInt16 => "USMALLINT",
+            DataType::UInt32 => "UINTEGER", 
+            DataType::UInt64 => "UBIGINT",
+            
+            // Floating point types
+            DataType::Float16 => "REAL", // DuckDB doesn't have HALF_FLOAT, use REAL
+            DataType::Float32 => "REAL",
+            DataType::Float64 => "DOUBLE",
+            
+            // Decimal types
+            DataType::Decimal128(precision, scale) => {
+                return Ok(format!("DECIMAL({}, {})", precision, scale));
+            }
+            DataType::Decimal256(precision, scale) => {
+                // DuckDB doesn't support Decimal256, use Decimal128 equivalent
+                let max_precision = (*precision).min(38); // DuckDB max precision is 38
+                return Ok(format!("DECIMAL({}, {})", max_precision, scale));
+            }
+            
+            // String types
+            DataType::Utf8 => "VARCHAR",
+            DataType::LargeUtf8 => "VARCHAR", 
+            DataType::Binary => "BLOB",
+            DataType::LargeBinary => "BLOB",
+            
+            // Date and time types
+            DataType::Date32 => "DATE",
+            DataType::Date64 => "DATE", 
+            DataType::Time32(_) => "TIME",
+            DataType::Time64(_) => "TIME",
+            DataType::Timestamp(_time_unit, timezone) => {
+                match timezone {
+                    Some(_) => "TIMESTAMPTZ", // With timezone
+                    None => "TIMESTAMP",      // Without timezone
+                }
+            }
+            DataType::Duration(_) => "INTERVAL",
+            DataType::Interval(_) => "INTERVAL",
+            
+            // Complex types
+            DataType::List(field) => {
+                let inner_type = self.convert_type_inner(field.data_type())?;
+                return Ok(format!("{}[]", inner_type));
+            }
+            DataType::LargeList(field) => {
+                let inner_type = self.convert_type_inner(field.data_type())?;
+                return Ok(format!("{}[]", inner_type));
+            }
+            DataType::FixedSizeList(field, _size) => {
+                let inner_type = self.convert_type_inner(field.data_type())?;
+                return Ok(format!("{}[]", inner_type));
+            }
+            DataType::Struct(fields) => {
+                // DuckDB STRUCT type
+                let field_types: Result<Vec<String>, AdapterError> = fields
+                    .iter()
+                    .map(|field| {
+                        let inner_type = self.convert_type_inner(field.data_type())?;
+                        Ok(format!("{} {}", field.name(), inner_type))
+                    })
+                    .collect();
+                let field_types = field_types?;
+                return Ok(format!("STRUCT({})", field_types.join(", ")));
+            }
+            DataType::Map(field, _sorted) => {
+                // DuckDB MAP type
+                if let DataType::Struct(struct_fields) = field.data_type() {
+                    if struct_fields.len() == 2 {
+                        let key_type = self.convert_type_inner(struct_fields[0].data_type())?;
+                        let value_type = self.convert_type_inner(struct_fields[1].data_type())?;
+                        return Ok(format!("MAP({}, {})", key_type, value_type));
+                    }
+                }
+                "JSON" // Fallback to JSON for complex maps
+            }
+            DataType::Union(_, _) => "JSON", // No direct equivalent, use JSON
+            
+            // Other types
+            DataType::Null => "NULL",
+            DataType::Dictionary(_, value_type) => {
+                // Convert dictionary to its value type
+                return self.convert_type_inner(value_type);
+            }
+            
+            // Unsupported types - fallback to VARCHAR or JSON
+            DataType::FixedSizeBinary(_) => "BLOB",
+            DataType::RunEndEncoded(_, _) => "JSON",
+            _ => "VARCHAR", // Safe fallback for any new/unknown types
+        };
+        
+        Ok(duckdb_type.to_string())
     }
 
     fn get_column_schema_from_query(
@@ -430,6 +549,7 @@ impl DuckDBTypedAdapter {
             .to_string()
             .into()
     }
+
 }
 
 impl AdapterTyping for DuckDBTypedAdapter {
@@ -537,7 +657,7 @@ mod tests {
     fn test_duckdb_convert_type_inner() {
         let adapter = DuckDBTypedAdapter::new();
         let result = adapter.convert_type_inner(&DataType::Utf8).unwrap();
-        assert_eq!(result, "TEXT");
+        assert_eq!(result, "VARCHAR");
     }
 
     #[test]
@@ -855,4 +975,114 @@ mod tests {
         assert_eq!(schemas, vec!["main", "information_schema", "test_schema"]);
         println!("list_schemas correctly extracted schema names from result");
     }
+
+    #[test]
+    fn test_duckdb_type_conversion() {
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Test basic types
+        assert_eq!(adapter.convert_type_inner(&DataType::Boolean).unwrap(), "BOOLEAN");
+        assert_eq!(adapter.convert_type_inner(&DataType::Int32).unwrap(), "INTEGER");
+        assert_eq!(adapter.convert_type_inner(&DataType::Int64).unwrap(), "BIGINT");
+        assert_eq!(adapter.convert_type_inner(&DataType::Float32).unwrap(), "REAL");
+        assert_eq!(adapter.convert_type_inner(&DataType::Float64).unwrap(), "DOUBLE");
+        assert_eq!(adapter.convert_type_inner(&DataType::Utf8).unwrap(), "VARCHAR");
+        assert_eq!(adapter.convert_type_inner(&DataType::Binary).unwrap(), "BLOB");
+        
+        // Test date/time types
+        assert_eq!(adapter.convert_type_inner(&DataType::Date32).unwrap(), "DATE");
+        assert_eq!(adapter.convert_type_inner(&DataType::Time32(arrow_schema::TimeUnit::Second)).unwrap(), "TIME");
+        assert_eq!(adapter.convert_type_inner(&DataType::Timestamp(arrow_schema::TimeUnit::Millisecond, None)).unwrap(), "TIMESTAMP");
+        assert_eq!(adapter.convert_type_inner(&DataType::Timestamp(arrow_schema::TimeUnit::Microsecond, Some("UTC".into()))).unwrap(), "TIMESTAMPTZ");
+        
+        // Test decimal types
+        assert_eq!(adapter.convert_type_inner(&DataType::Decimal128(10, 2)).unwrap(), "DECIMAL(10, 2)");
+        assert_eq!(adapter.convert_type_inner(&DataType::Decimal256(50, 3)).unwrap(), "DECIMAL(38, 3)"); // Clamped to max precision
+        
+        // Test unsigned integer types (DuckDB specific)
+        assert_eq!(adapter.convert_type_inner(&DataType::UInt8).unwrap(), "UTINYINT");
+        assert_eq!(adapter.convert_type_inner(&DataType::UInt16).unwrap(), "USMALLINT");
+        assert_eq!(adapter.convert_type_inner(&DataType::UInt32).unwrap(), "UINTEGER");
+        assert_eq!(adapter.convert_type_inner(&DataType::UInt64).unwrap(), "UBIGINT");
+        
+        // Test complex types
+        let list_type = DataType::List(Arc::new(arrow_schema::Field::new("item", DataType::Int32, false)));
+        assert_eq!(adapter.convert_type_inner(&list_type).unwrap(), "INTEGER[]");
+        
+        // Test fallback types
+        assert_eq!(adapter.convert_type_inner(&DataType::Null).unwrap(), "NULL");
+        
+        // Test dictionary type (should convert to underlying type)
+        let dict_type = DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8));
+        assert_eq!(adapter.convert_type_inner(&dict_type).unwrap(), "VARCHAR");
+    }
+
+    #[test]
+    fn test_duckdb_arrow_schema_conversion() {
+        use arrow_schema::{Field, Schema as ArrowSchema};
+        
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Create a test Arrow schema
+        let schema = ArrowSchema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("name", DataType::Utf8, true), 
+            Field::new("price", DataType::Decimal128(10, 2), false),
+            Field::new("is_active", DataType::Boolean, true),
+            Field::new("created_at", DataType::Timestamp(arrow_schema::TimeUnit::Millisecond, None), false),
+        ]);
+        
+        let columns = adapter.arrow_schema_to_dbt_columns(Arc::new(schema)).unwrap();
+        assert_eq!(columns.len(), 5);
+        
+        // Check that we can convert the columns back to values
+        for column in &columns {
+            // The column should be a StdColumn object
+            let std_column = column.downcast_object_ref::<dbt_schemas::schemas::columns::base::StdColumn>();
+            assert!(std_column.is_some());
+        }
+        
+        // Verify specific type conversions by name
+        let id_column = columns[0].downcast_object_ref::<dbt_schemas::schemas::columns::base::StdColumn>().unwrap();
+        assert_eq!(id_column.name, "id");
+        assert_eq!(id_column.dtype, "BIGINT");
+        
+        let name_column = columns[1].downcast_object_ref::<dbt_schemas::schemas::columns::base::StdColumn>().unwrap();
+        assert_eq!(name_column.name, "name");
+        assert_eq!(name_column.dtype, "VARCHAR");
+        
+        let price_column = columns[2].downcast_object_ref::<dbt_schemas::schemas::columns::base::StdColumn>().unwrap();
+        assert_eq!(price_column.name, "price");
+        assert_eq!(price_column.dtype, "DECIMAL(10, 2)");
+    }
+
+    #[test]
+    fn test_duckdb_complex_types() {
+        let adapter = DuckDBTypedAdapter::new();
+        
+        // Test STRUCT type
+        let struct_fields = vec![
+            arrow_schema::Field::new("x", DataType::Float64, false),
+            arrow_schema::Field::new("y", DataType::Float64, false),
+        ];
+        let struct_type = DataType::Struct(struct_fields.into());
+        assert_eq!(adapter.convert_type_inner(&struct_type).unwrap(), "STRUCT(x DOUBLE, y DOUBLE)");
+        
+        // Test nested LIST type  
+        let nested_list = DataType::List(Arc::new(
+            arrow_schema::Field::new("item", DataType::List(Arc::new(
+                arrow_schema::Field::new("subitem", DataType::Utf8, false)
+            )), false)
+        ));
+        assert_eq!(adapter.convert_type_inner(&nested_list).unwrap(), "VARCHAR[][]");
+        
+        // Test MAP type
+        let map_struct = DataType::Struct(vec![
+            arrow_schema::Field::new("key", DataType::Utf8, false),
+            arrow_schema::Field::new("value", DataType::Int32, false),
+        ].into());
+        let map_type = DataType::Map(Arc::new(arrow_schema::Field::new("entries", map_struct, false)), false);
+        assert_eq!(adapter.convert_type_inner(&map_type).unwrap(), "MAP(VARCHAR, INTEGER)");
+    }
+
 }

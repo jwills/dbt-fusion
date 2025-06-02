@@ -150,6 +150,12 @@ mod tests {
                     .with_password(token);
                 Ok(builder)
             }
+            Backend::DuckDB => {
+                // DuckDB configuration for testing - use in-memory database
+                let mut builder = database::Builder::new(backend);
+                builder.with_named_option("path", ":memory:")?;
+                Ok(builder)
+            }
             Backend::Generic { .. } => unimplemented!(),
         }?;
         if backend == Backend::Snowflake {

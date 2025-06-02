@@ -61,6 +61,7 @@ impl DuckDBAuth {
         self.temp_directory = Some(temp_directory.into());
         self
     }
+
 }
 
 impl Default for DuckDBAuth {
@@ -113,6 +114,9 @@ impl Auth for DuckDBAuth {
         if let Some(temp_directory) = config.maybe_get_str("temp_directory")?.or(self.temp_directory.as_ref().cloned()) {
             builder.with_named_option("temp_directory", temp_directory)?;
         }
+
+        // Note: Extensions are handled at the adapter level via SQL commands after connection
+        // We don't configure them here in the ADBC builder
 
         Ok(builder)
     }
@@ -203,4 +207,5 @@ mod tests {
         assert!(display.contains("DuckDBAuth"));
         assert!(display.contains("/test.db"));
     }
+
 }
