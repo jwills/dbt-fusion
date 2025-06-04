@@ -1,5 +1,6 @@
 use crate::adapters::bigquery::relation::BigqueryRelationType;
 use crate::adapters::databricks::relation::DatabricksRelationType;
+use crate::adapters::duckdb::relation::DuckDBRelationType;
 use crate::adapters::postgres::relation::PostgresRelationType;
 use crate::adapters::redshift::relation::RedshiftRelationType;
 use crate::adapters::relation_object::StaticBaseRelation;
@@ -17,6 +18,7 @@ pub fn create_static_relation(adapter_type: AdapterType) -> Option<Value> {
         AdapterType::Bigquery => &BigqueryRelationType as &dyn StaticBaseRelation,
         AdapterType::Databricks => &DatabricksRelationType as &dyn StaticBaseRelation,
         AdapterType::Redshift => &RedshiftRelationType as &dyn StaticBaseRelation,
+        AdapterType::DuckDB => &DuckDBRelationType as &dyn StaticBaseRelation,
         _ => unimplemented!("{} doesn't support relation types", adapter_type),
     };
     Some(Value::from_object(result))
