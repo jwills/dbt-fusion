@@ -1,5 +1,4 @@
 use crate::adapters::base_adapter::{AdapterType, AdapterTyping};
-use crate::adapters::duckdb::relation::DuckDBRelationType;
 use crate::adapters::errors::{AdapterError, AdapterErrorKind, AdapterResult};
 use crate::adapters::metadata::MetadataAdapter;
 use crate::adapters::response::AdapterResponse;
@@ -565,9 +564,6 @@ impl AdapterTyping for DuckDBTypedAdapter {
         self
     }
 
-    fn relation_type(&self) -> Option<Value> {
-        Some(Value::from_object(DuckDBRelationType))
-    }
 
     fn column_type(&self) -> Option<Value> {
         None // TODO: Implement column type
@@ -586,7 +582,6 @@ mod tests {
     fn test_create_duckdb_adapter() {
         let adapter = DuckDBTypedAdapter::new();
         assert_eq!(adapter.adapter_type(), AdapterType::DuckDB);
-        assert!(adapter.relation_type().is_some());
         assert!(adapter.column_type().is_none());
         assert!(adapter.engine().is_none());
     }
@@ -675,8 +670,8 @@ mod tests {
         // Verify BridgeAdapter correctly reports DuckDB adapter type
         assert_eq!(bridge_adapter.adapter_type(), AdapterType::DuckDB);
         
-        // Verify relation type is available
-        assert!(bridge_adapter.relation_type().is_some());
+        // Verify column type is available
+        assert!(bridge_adapter.column_type().is_none());
         
         // Verify engine is None (no engine set)
         assert!(bridge_adapter.engine().is_none());
@@ -685,19 +680,6 @@ mod tests {
         assert_eq!(bridge_adapter.to_string(), "Adapter(duckdb)");
     }
 
-    #[test]
-    fn test_relation_type_factory() {
-        use crate::adapters::bridge_adapter::relation_type_from_adapter_type;
-        
-        // Test that DuckDB adapter type returns the correct relation type
-        let relation_type = relation_type_from_adapter_type(AdapterType::DuckDB);
-        assert!(relation_type.is_some());
-        
-        // Verify it can be downcast to DuckDBRelationType
-        let value = relation_type.unwrap();
-        let duckdb_relation_type = value.downcast_object_ref::<DuckDBRelationType>();
-        assert!(duckdb_relation_type.is_some());
-    }
 
     #[test]
     fn test_duckdb_connection_creation() {

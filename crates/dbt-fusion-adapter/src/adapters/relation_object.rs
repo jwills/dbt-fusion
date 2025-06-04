@@ -176,6 +176,17 @@ pub fn create_relation(
             None,
             false,
         )) as Arc<dyn BaseRelation>,
+        "duckdb" => {
+            use crate::adapters::duckdb::relation::DuckDBRelation;
+            Arc::new(DuckDBRelation::new(
+                Some(database),
+                Some(schema),
+                identifier,
+                relation_type,
+                TableFormat::Default,
+                custom_quoting,
+            )) as Arc<dyn BaseRelation>
+        },
         _ => panic!("not supported"),
     };
     Ok(relation)
