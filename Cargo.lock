@@ -1711,6 +1711,7 @@ dependencies = [
  "dbt-auth",
  "dbt-common",
  "dbt-frontend-common",
+ "dbt-jinja-utils",
  "dbt-schemas",
  "dbt-serde_yaml",
  "dbt-xdbc",

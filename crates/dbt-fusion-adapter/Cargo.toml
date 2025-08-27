@@ -49,3 +49,6 @@ doctest = false
 
 [features]
 odbc = ["dbt-xdbc/odbc"]
+
+[dev-dependencies]
+dbt-jinja-utils = { workspace = true }
