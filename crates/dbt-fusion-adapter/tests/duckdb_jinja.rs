@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use dbt_auth::AdapterConfig;
 use dbt_fusion_adapter::BridgeAdapter;
+use dbt_fusion_adapter::BaseAdapter;
 use dbt_fusion_adapter::cache::RelationCache;
 use dbt_fusion_adapter::duckdb::adapter::DuckdbAdapter;
 use dbt_fusion_adapter::SqlEngine;
@@ -28,7 +29,8 @@ fn duckdb_jinja_adapter_execute() {
 
     // Build a minimal minijinja env with adapter global
     let mut env = minijinja::Environment::new();
-    env.add_global("adapter", minijinja::Value::from_object(bridge));
+    env.add_global("adapter", bridge.as_value());
+    env.add_global("dialect", minijinja::Value::from("duckdb"));
 
     // Execute simple query via Jinja adapter call
     let tpl = "{% set _res = adapter.execute('select 1 as x', fetch=true) %}ok";

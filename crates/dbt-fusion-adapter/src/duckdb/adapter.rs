@@ -1,6 +1,7 @@
 use crate::AdapterType;
 use crate::errors::{AdapterError, AdapterErrorKind, AdapterResult};
 use crate::relation_object::create_relation;
+use crate::duckdb::relation::DuckdbRelation;
 use crate::sql_engine::SqlEngine;
 use crate::typed_adapter::TypedBaseAdapter;
 use crate::AdapterTyping;
@@ -158,15 +159,18 @@ impl TypedBaseAdapter for DuckdbAdapter {
         );
         let batch = self.engine.execute(conn, &query_ctx.with_sql(sql))?;
         if batch.num_rows() > 0 {
-            let relation = create_relation(
-                self.adapter_type().to_string(),
-                "main".to_string(),
-                schema.to_string(),
+            // Create a relation without a database/catalog component to avoid
+            // rendering a three-part name. DuckDB typically uses schema.table.
+            let rel = DuckdbRelation::try_new(
+                None, // no database/catalog
+                Some(schema.to_string()),
                 Some(identifier.to_string()),
                 None,
                 self.get_resolved_quoting(),
-            )?;
-            Ok(Some(relation))
+            )
+            .map(Arc::new)
+            .map_err(AdapterError::from)?;
+            Ok(Some(rel))
         } else {
             Ok(None)
         }
@@ -249,4 +253,3 @@ impl TypedBaseAdapter for DuckdbAdapter {
         Ok(out)
     }
 }
-
