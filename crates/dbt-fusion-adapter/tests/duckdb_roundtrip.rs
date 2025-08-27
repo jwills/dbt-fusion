@@ -40,6 +40,12 @@ fn duckdb_roundtrip_relation_and_columns() {
     assert!(found.is_some());
     let relation = found.unwrap();
 
+    // Validate FQN renders with detected catalog (in-memory => memory)
+    let fqn = relation.render_self_as_str();
+    let parts: Vec<&str> = fqn.split('.').collect();
+    assert_eq!(parts.len(), 3, "expected three-part name, got: {}", fqn);
+    assert_eq!(parts[0].to_ascii_lowercase(), "memory");
+
     // Retrieve columns via typed adapter
     let mut env = minijinja::Environment::new();
     let state = env.empty_state();

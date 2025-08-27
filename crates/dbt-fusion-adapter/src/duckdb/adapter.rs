@@ -6,7 +6,7 @@ use crate::sql_engine::SqlEngine;
 use crate::typed_adapter::TypedBaseAdapter;
 use crate::AdapterTyping;
 
-use arrow::array::Array;
+use arrow::array::{Array, StringArray};
 use arrow_schema::DataType;
 use dbt_common::adapter::SchemaRegistry;
 use dbt_common::cancellation::CancellationToken;
@@ -159,10 +159,26 @@ impl TypedBaseAdapter for DuckdbAdapter {
         );
         let batch = self.engine.execute(conn, &query_ctx.with_sql(sql))?;
         if batch.num_rows() > 0 {
-            // Create a relation without a database/catalog component to avoid
-            // rendering a three-part name. DuckDB typically uses schema.table.
+            // Detect the catalog for the given schema so we can render a proper
+            // three-part name. In in-memory sessions this is typically "memory".
+            let detect_sql = format!(
+                "select catalog_name from information_schema.schemata where lower(schema_name) = lower('{}') limit 1",
+                esc(schema)
+            );
+            let batch2 = self.engine.execute(conn, &query_ctx.with_sql(detect_sql))?;
+            let catalog = if batch2.num_rows() > 0 && batch2.num_columns() > 0 {
+                let arr = batch2
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .ok_or_else(|| AdapterError::new(AdapterErrorKind::Internal, "unexpected catalog_name type"))?;
+                if arr.is_null(0) { None } else { Some(arr.value(0).to_string()) }
+            } else {
+                None
+            };
+
             let rel = DuckdbRelation::try_new(
-                None, // no database/catalog
+                catalog, // database/catalog
                 Some(schema.to_string()),
                 Some(identifier.to_string()),
                 None,

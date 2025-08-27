@@ -87,7 +87,7 @@ Note: A full “run” orchestration is WIP; today, you can execute SQL and macr
 
 ## Design Notes / Decisions
 
-- Relation rendering: for DuckDB we avoid rendering a three-part name (catalog.db.schema.identifier). Relations are constructed without a catalog to keep names like `schema.table`. This avoids binder errors such as “Catalog `main` does not exist.”
+- Relation rendering (three-part FQNs): DuckDB expects `catalog.schema.identifier` when the catalog exists. In in-memory sessions the catalog is `memory`, not `main`. We now detect the catalog from `information_schema.schemata` and render a proper three-part name (e.g., `memory.main.table`). This avoids binder errors like “Catalog `main` does not exist.” In multi-file (ATTACH) setups, the catalog is the attached alias (e.g., `mydb.main.table`).
 - Identifier rules: treat DuckDB’s quoting/identifier rules similarly to Postgres (double-quoted, alphanumeric + `_` unquoted). Can be revisited if deviations are needed.
 - Macro resolution: dispatch maps from `dbt` namespace to `dbt_duckdb` via a simple namespace map for tests. The full environment builder will populate more complete registries for projects.
 
@@ -99,7 +99,8 @@ Note: A full “run” orchestration is WIP; today, you can execute SQL and macr
 - Approach:
   - Parse `profiles.yml` (e.g., `database`) for a file path.
   - Set the path via connection-level options when building the ADBC connection for DuckDB (rather than database-level URI which some builds reject).
-  - Fallback: connect in-memory and run `ATTACH '/path/to/file.duckdb' AS main` if required.
+  - Fallback: connect in-memory and run `ATTACH '/path/to/file.duckdb' AS <alias>` if required.
+  - When a catalog is attached (in-memory alias or file alias), relation rendering will use three-part names with the detected/attached catalog.
 - Deliverable: add a test that creates a table in a file-backed DB and verifies persistence across distinct connections.
 
 2) Full materialization smoke test
@@ -154,4 +155,3 @@ export DUCKDB_DRIVER_NAME=duckdb
   - `duckdb_smoke.rs`, `duckdb_roundtrip.rs`, `duckdb_jinja.rs`
   - Macro-driven: `duckdb_macro_datediff.rs`, `duckdb_macro_create_table.rs`
 - Script: `scripts/sync_duckdb_macros.sh`
-
