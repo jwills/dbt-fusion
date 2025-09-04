@@ -45,6 +45,8 @@ pub mod metadata;
 pub mod parse;
 /// Postgres adapter
 pub mod postgres;
+/// DuckDB adapter
+pub mod duckdb;
 /// Redshift adapter
 pub mod redshift;
 /// Salesforce adapter

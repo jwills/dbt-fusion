@@ -36,6 +36,29 @@ curl -fsSL https://public.cdn.getdbt.com/fs/install/install.sh | sh -s -- --upda
 
 3. **Build Fusion from Source** - See the below section: [Compiling from Source](#compiling-from-source)
 
+### DuckDB Adapter (New)
+
+DuckDB is supported via the ADBC DuckDB driver loaded dynamically at runtime (not via the dbt CDN). To use DuckDB:
+
+- Ensure the `adbc_driver_duckdb` shared library is available on your system path or in a local `lib/` directory near the binary. Entry point: `DuckDBDriverInit`.
+- Minimal adapter config (in-memory):
+
+```
+type: duckdb
+database: :memory:
+```
+
+- Minimal adapter config (file-backed):
+
+```
+type: duckdb
+database: /absolute/or/relative/path/to.db
+```
+
+Notes:
+- DuckDB currently maps to Postgres-like SQL dialect behavior for quoting and parsing.
+- No CDN auto-install is performed for DuckDB; the driver must be present locally.
+
 
 ### Supported Operating Systems and CPU Microarchitectures
 Fusion & associated drivers are compiled for each CPU microarchitecture and operating system independently. This allows for hardware level optimization.

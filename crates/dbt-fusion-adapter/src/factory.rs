@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::AdapterType;
 use crate::bigquery::relation::BigqueryRelationType;
 use crate::databricks::relation::DatabricksRelationType;
+use crate::duckdb::relation::DuckdbRelationType;
 use crate::postgres::relation::PostgresRelationType;
 use crate::redshift::relation::RedshiftRelationType;
 use crate::relation_object::StaticBaseRelationObject;
@@ -42,6 +43,10 @@ pub fn create_static_relation(
         AdapterType::Salesforce => {
             let salesforce_relation_type = SalesforceRelationType(quoting);
             StaticBaseRelationObject::new(Arc::new(salesforce_relation_type))
+        }
+        AdapterType::Duckdb => {
+            let duckdb_relation_type = DuckdbRelationType(quoting);
+            StaticBaseRelationObject::new(Arc::new(duckdb_relation_type))
         }
     };
     Some(Value::from_object(result))

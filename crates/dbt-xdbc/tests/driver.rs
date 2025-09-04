@@ -152,12 +152,16 @@ mod tests {
             Backend::Salesforce => {
                 let mut builder = database::Builder::new(backend);
                 builder.with_named_option(salesforce::AUTH_TYPE, salesforce::auth_type::JWT)?;
-
                 builder.with_named_option(salesforce::LOGIN_URL, "https://login.salesforce.com")?;
                 builder.with_named_option(salesforce::USERNAME, "test@example.com")?;
                 builder.with_named_option(salesforce::CLIENT_ID, "1")?;
                 builder.with_named_option(salesforce::JWT_PRIVATE_KEY, "test")?;
-
+                Ok(builder)
+            }
+            Backend::DuckDb => {
+                let mut builder = database::Builder::new(backend);
+                // use in-memory duckdb for tests harness
+                builder.with_parse_uri("duckdb:")?;
                 Ok(builder)
             }
             Backend::Generic { .. } => unimplemented!("generic backend database builder in tests"),

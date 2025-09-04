@@ -33,8 +33,13 @@ pub enum AdapterType {
     Databricks,
     /// Redshift
     Redshift,
+    
     /// Salesforce
     Salesforce,
+    
+    /// DuckDB
+    Duckdb,
+    
 }
 
 impl From<AdapterType> for Dialect {
@@ -45,10 +50,15 @@ impl From<AdapterType> for Dialect {
             AdapterType::Bigquery => Dialect::Bigquery,
             AdapterType::Databricks => Dialect::Databricks,
             AdapterType::Redshift => Dialect::Redshift,
+            
             // Salesforce dialect is unclear, it claims ANSI vaguely
             // https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/data-cloud-query-api-reference/c360a-api-query-v2-call-overview.html
             // falls back to Postgresql at the moment
             AdapterType::Salesforce => Dialect::Postgresql,
+            
+            AdapterType::Duckdb => Dialect::Postgresql,
+            
+            
         }
     }
 }

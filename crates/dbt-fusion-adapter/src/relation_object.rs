@@ -15,6 +15,7 @@ use serde::Deserialize;
 
 use crate::bigquery::relation::BigqueryRelation;
 use crate::databricks::relation::DatabricksRelation;
+use crate::duckdb::relation::DuckdbRelation;
 use crate::postgres::relation::PostgresRelation;
 use crate::redshift::relation::RedshiftRelation;
 use crate::salesforce::relation::SalesforceRelation;
@@ -186,6 +187,13 @@ pub fn create_relation(
 ) -> Result<Arc<dyn BaseRelation>, MinijinjaError> {
     let relation = match adapter_type {
         AdapterType::Postgres => Arc::new(PostgresRelation::try_new(
+            Some(database),
+            Some(schema),
+            identifier,
+            relation_type,
+            custom_quoting,
+        )?) as Arc<dyn BaseRelation>,
+        AdapterType::Duckdb => Arc::new(DuckdbRelation::try_new(
             Some(database),
             Some(schema),
             identifier,

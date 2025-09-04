@@ -45,6 +45,8 @@ pub enum Backend {
     Redshift,
     /// Salesforce driver implementation (ADBC).
     Salesforce,
+    /// DuckDB driver implementation (ADBC).
+    DuckDb,
     /// Databricks driver implementation (ODBC).
     DatabricksODBC,
     /// Redshift driver implementation (ODBC).
@@ -73,6 +75,7 @@ impl Display for Backend {
             Backend::Postgres => write!(f, "PostgreSQL"),
             Backend::Databricks => write!(f, "Databricks"),
             Backend::Redshift => write!(f, "Redshift"),
+            Backend::DuckDb => write!(f, "DuckDB"),
             Backend::DatabricksODBC => write!(f, "Databricks"),
             Backend::RedshiftODBC => write!(f, "Redshift"),
             Backend::Salesforce => write!(f, "Salesforce"),
@@ -91,6 +94,7 @@ impl Backend {
             Backend::Salesforce => Some("adbc_driver_salesforce"),
             // todo: swap over to Redshift specific driver once available
             Backend::Redshift => Some("adbc_driver_postgresql"),
+            Backend::DuckDb => Some("adbc_driver_duckdb"),
             Backend::DatabricksODBC | Backend::RedshiftODBC => None, // these use ODBC
             Backend::Generic { library_name, .. } => Some(library_name),
         }
@@ -99,6 +103,8 @@ impl Backend {
     pub fn adbc_driver_entrypoint(&self) -> Option<&'static [u8]> {
         match self {
             Backend::Snowflake => Some(b"SnowflakeDriverInit"),
+            // DuckDB ADBC driver uses a custom entrypoint name.
+            Backend::DuckDb => Some(b"duckdb_adbc_init"),
             Backend::Generic {
                 library_name: _,
                 entrypoint,
@@ -115,6 +121,7 @@ impl Backend {
             | Backend::Databricks
             | Backend::Redshift
             | Backend::Salesforce
+            | Backend::DuckDb
             | Backend::Generic { .. } => FFIProtocol::Adbc,
             Backend::DatabricksODBC | Backend::RedshiftODBC => FFIProtocol::Odbc,
         }
@@ -356,7 +363,7 @@ impl AdbcDriver {
                 Self::try_load_driver_through_cdn_cache(backend, adbc_version)
             }
             // Drivers that are not published to the dbt Labs CDN.
-            Backend::Generic { .. } => Self::try_load_driver_from_name(
+            Backend::Generic { .. } | Backend::DuckDb => Self::try_load_driver_from_name(
                 backend.adbc_library_name().unwrap(),
                 backend.adbc_driver_entrypoint(),
                 adbc_version,
@@ -502,6 +509,12 @@ mod tests {
         try_load_with_builder(Backend::BigQuery, AdbcVersion::V100)?;
         try_load_with_builder(Backend::Postgres, AdbcVersion::V100)?;
         try_load_with_builder(Backend::Databricks, AdbcVersion::V100)?;
+        // Run if the DuckDB driver is available and tests are enabled.
+        // This will be skipped unless the environment has the library reachable.
+        #[cfg_attr(not(test), allow(unused))]
+        {
+            let _ = try_load_with_builder(Backend::DuckDb, AdbcVersion::V100);
+        }
         Ok(())
     }
 
@@ -512,6 +525,10 @@ mod tests {
         try_load_with_builder(Backend::BigQuery, AdbcVersion::V110)?;
         try_load_with_builder(Backend::Postgres, AdbcVersion::V110)?;
         try_load_with_builder(Backend::Databricks, AdbcVersion::V110)?;
+        #[cfg_attr(not(test), allow(unused))]
+        {
+            let _ = try_load_with_builder(Backend::DuckDb, AdbcVersion::V110);
+        }
         Ok(())
     }
 
@@ -523,6 +540,7 @@ mod tests {
             Backend::BigQuery,
             Backend::Postgres,
             Backend::Databricks,
+            Backend::DuckDb,
         ]
         .iter()
         .copied()

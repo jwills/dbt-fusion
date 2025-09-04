@@ -667,6 +667,7 @@ fn metadata_type_candidate_keys(backend: Backend) -> &'static [&'static str] {
         Backend::BigQuery => &BIGQUERY_KEYS,
         Backend::Databricks => &DATABRICKS_KEYS,
         Backend::Redshift | Backend::RedshiftODBC => &REDSHIFT_KEYS,
+        Backend::DuckDb => &GENERIC_KEYS,
         Backend::DatabricksODBC => &DATABRICKS_KEYS,
         Backend::Generic { .. } => &GENERIC_KEYS,
     }
@@ -2006,6 +2007,7 @@ mod tests {
                     | Backend::Salesforce => pq,
                     Backend::Databricks | Backend::DatabricksODBC => dbx,
                     Backend::Generic { .. } => generic,
+                    Backend::DuckDb => generic,
                 };
                 (t, s)
             })
