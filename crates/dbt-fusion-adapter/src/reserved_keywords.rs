@@ -7,14 +7,14 @@ use dbt_xdbc::Backend;
 
 pub fn sorted_keywords_for(backend: Backend) -> &'static [&'static str] {
     use Backend::*;
-    match backend {
-        Snowflake => SNOWFLAKE_RESERVED_KEYWORDS,
-        BigQuery => BIGQUERY_RESERVED_KEYWORDS,
-        Redshift | RedshiftODBC => REDSHIFT_RESERVED_KEYWORDS,
-        // TODO: fill in other dialects' keywords and define a default fallback
-        Databricks | DatabricksODBC | Postgres | Salesforce | Generic { .. } => &[],
+        match backend {
+            Snowflake => SNOWFLAKE_RESERVED_KEYWORDS,
+            BigQuery => BIGQUERY_RESERVED_KEYWORDS,
+            Redshift | RedshiftODBC => REDSHIFT_RESERVED_KEYWORDS,
+            // TODO: fill in other dialects' keywords and define a default fallback
+            Databricks | DatabricksODBC | Postgres | Salesforce | DuckDb | Generic { .. } => &[],
+        }
     }
-}
 
 /// Compares an uppercase keyword with a token in a case-insensitive manner.
 ///

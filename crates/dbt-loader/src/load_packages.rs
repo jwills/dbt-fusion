@@ -97,7 +97,7 @@ pub fn persist_internal_packages(
     let mut internal_packages = vec!["dbt-adapters", &adapter_package];
     // Some adapters have extra dependencies
     match adapter_type {
-        AdapterType::Redshift => internal_packages.push("dbt-postgres"),
+        AdapterType::Redshift | AdapterType::Duckdb => internal_packages.push("dbt-postgres"),
         AdapterType::Databricks => internal_packages.push("dbt-spark"),
         _ => {}
     }

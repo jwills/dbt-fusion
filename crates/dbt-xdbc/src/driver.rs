@@ -363,11 +363,25 @@ impl AdbcDriver {
                 Self::try_load_driver_through_cdn_cache(backend, adbc_version)
             }
             // Drivers that are not published to the dbt Labs CDN.
-            Backend::Generic { .. } | Backend::DuckDb => Self::try_load_driver_from_name(
-                backend.adbc_library_name().unwrap(),
-                backend.adbc_driver_entrypoint(),
+            Backend::Generic { library_name, entrypoint } => Self::try_load_driver_from_name(
+                library_name,
+                entrypoint,
                 adbc_version,
             ),
+            Backend::DuckDb => {
+                let entrypoint = backend.adbc_driver_entrypoint();
+                if let Ok(path) = env::var("DUCKDB_DRIVER_PATH") {
+                    return ManagedAdbcDriver::load_dynamic_from_filename(path, entrypoint, adbc_version);
+                }
+                if let Ok(name) = env::var("DUCKDB_DRIVER_NAME") {
+                    return Self::try_load_driver_from_name(&name, entrypoint, adbc_version);
+                }
+                Self::try_load_driver_from_name(
+                    backend.adbc_library_name().unwrap(),
+                    entrypoint,
+                    adbc_version,
+                )
+            }
             // ODBC drivers.
             Backend::DatabricksODBC | Backend::RedshiftODBC => Err(Error::with_message_and_status(
                 format!(

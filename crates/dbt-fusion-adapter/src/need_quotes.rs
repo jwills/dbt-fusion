@@ -3,38 +3,39 @@ use dbt_xdbc::Backend;
 use crate::reserved_keywords::is_keyword_ignore_ascii_case;
 
 /// The character used to quote identifiers in this backend's dialect.
-pub const fn quote_char(backend: Backend) -> char {
-    use Backend::*;
-    match backend {
-        BigQuery | Databricks | DatabricksODBC => '`',
-        Snowflake => '"',
-        Redshift | RedshiftODBC | Postgres | Salesforce => '"',
-        Generic { .. } => '"',
+    pub const fn quote_char(backend: Backend) -> char {
+        use Backend::*;
+        match backend {
+            BigQuery | Databricks | DatabricksODBC => '`',
+            Snowflake => '"',
+            Redshift | RedshiftODBC | Postgres | Salesforce | DuckDb => '"',
+            Generic { .. } => '"',
+        }
     }
-}
 
 /// Returns true if the given character is a valid character for an
 /// unquoted identifier in this backend's dialect.
-pub fn is_valid_identifier_char(backend: Backend, c: char) -> bool {
-    use Backend::*;
-    match backend {
-        BigQuery => c.is_alphanumeric() || ['_', '-', '$'].contains(&c),
-        Snowflake => {
+    pub fn is_valid_identifier_char(backend: Backend, c: char) -> bool {
+        use Backend::*;
+        match backend {
+            BigQuery => c.is_alphanumeric() || ['_', '-', '$'].contains(&c),
+            Snowflake => {
             // TODO: revert this once
             // https://github.com/sdf-labs/sdf/issues/3328 is fixed:
             // c.is_alphanumeric() || ['_', '`', '@'].contains(&c)
             c != '.' && c != quote_char(backend) && !c.is_whitespace() && c != '/' && c != ';'
         }
-        // XXX: check these fallbacks against documentation of these dialects
-        Postgres
-        | Databricks
-        | DatabricksODBC
-        | Redshift
-        | RedshiftODBC
-        | Salesforce
-        | Generic { .. } => c.is_alphanumeric() || c == '_',
+            // XXX: check these fallbacks against documentation of these dialects
+            Postgres
+                | DuckDb
+                | Databricks
+                | DatabricksODBC
+                | Redshift
+                | RedshiftODBC
+                | Salesforce
+                | Generic { .. } => c.is_alphanumeric() || c == '_',
+        }
     }
-}
 
 /// Returns true if the identifier has to be quoted when formatting to
 /// source code form in this backend's dialect.
