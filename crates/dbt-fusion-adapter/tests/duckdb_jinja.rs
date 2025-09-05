@@ -18,7 +18,7 @@ fn duckdb_jinja_adapter_execute() {
     }
 
     // Build engine + typed adapter + bridge
-    let adapter_cfg = AdapterConfig::new(HashMap::new());
+        let adapter_cfg = AdapterConfig::new(dbt_serde_yaml::Mapping::new());
     let auth = dbt_auth::auth_for_backend(Backend::DuckDb);
     let token = dbt_common::cancellation::CancellationToken::never_cancels();
     let engine = SqlEngine::new(Arc::from(auth), adapter_cfg, token);
@@ -34,7 +34,7 @@ fn duckdb_jinja_adapter_execute() {
 
     // Execute simple query via Jinja adapter call
     let tpl = "{% set _res = adapter.execute('select 1 as x', fetch=true) %}ok";
-    let rendered = env.render_named_str("test.sql", tpl, HashMap::<String, minijinja::Value>::new(), &[])
-        .expect("render ok");
+        let rendered = env.render_named_str("test.sql", tpl, HashMap::<String, minijinja::Value>::new(), &[])
+            .expect("render ok");
     assert_eq!(rendered, "ok");
 }

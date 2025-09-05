@@ -46,7 +46,7 @@ fn duckdb_macro_datediff_renders() {
     let macro_unit = MacroUnit { info, sql };
 
     // Build adapter
-    let adapter_cfg = AdapterConfig::new(HashMap::new());
+        let adapter_cfg = AdapterConfig::new(dbt_serde_yaml::Mapping::new());
     let auth = dbt_auth::auth_for_backend(Backend::DuckDb);
     let token = dbt_common::cancellation::CancellationToken::never_cancels();
     let engine = SqlEngine::new(Arc::from(auth), adapter_cfg, token);
@@ -75,9 +75,9 @@ fn duckdb_macro_datediff_renders() {
 
     // Render a template using adapter.dispatch to resolve duckdb__datediff
     let tpl = "{{ adapter.dispatch('datediff', 'dbt')(first_date='2020-01-01', second_date='2020-01-02', datepart='day') }}";
-    let rendered = env
-        .render_named_str("datediff_test.sql", tpl, HashMap::<String, minijinja::Value>::new(), &[])
-        .expect("render ok");
+        let rendered = env
+            .render_named_str("datediff_test.sql", tpl, HashMap::<String, Value>::new(), &[])
+            .expect("render ok");
 
     // The macro renders a SQL expression referencing date_diff
     assert!(rendered.contains("date_diff('day'"));

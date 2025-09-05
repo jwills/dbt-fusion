@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+    
 use std::sync::Arc;
 
 use dbt_auth::AdapterConfig;
@@ -17,7 +17,7 @@ fn duckdb_roundtrip_relation_and_columns() {
         return;
     }
 
-    let adapter_cfg = AdapterConfig::new(HashMap::new());
+        let adapter_cfg = AdapterConfig::new(dbt_serde_yaml::Mapping::new());
     let auth = dbt_auth::auth_for_backend(Backend::DuckDb);
     let token = dbt_common::cancellation::CancellationToken::never_cancels();
     let engine = SqlEngine::new(Arc::from(auth), adapter_cfg, token);
@@ -57,13 +57,13 @@ fn duckdb_roundtrip_relation_and_columns() {
     assert!(names.contains(&"y".to_string()));
 
     // Also verify we can construct relation explicitly and render FQN
-    let rel2 = create_relation(
-        adapter.adapter_type().to_string(),
-        "main".to_string(),
-        "main".to_string(),
-        Some("rtt".to_string()),
-        None,
-        adapter.quoting(),
+        let rel2 = create_relation(
+            adapter.adapter_type(),
+            "main".to_string(),
+            "main".to_string(),
+            Some("rtt".to_string()),
+            None,
+            adapter.quoting(),
     )
     .expect("create_relation ok");
     assert!(rel2.render_self_as_str().contains("main.rtt"));

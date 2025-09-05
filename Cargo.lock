@@ -4,13 +4,26 @@ version = 3
 
 [[package]]
 name = "adbc_core"
-version = "0.18.0"
-source = "git+https://github.com/dbt-labs/arrow-adbc?rev=3fdf3790bd0e0d0c2ed9f5a65266ce3d2c429811#3fdf3790bd0e0d0c2ed9f5a65266ce3d2c429811"
+version = "0.20.0"
+source = "git+https://github.com/dbt-labs/arrow-adbc?rev=34c0a6f7cd039334683bc0b05b9bc3430e0b7e86#34c0a6f7cd039334683bc0b05b9bc3430e0b7e86"
 dependencies = [
  "arrow-array",
  "arrow-schema",
  "libc",
+]
+
+[[package]]
+name = "adbc_driver_manager"
+version = "0.20.0"
+source = "git+https://github.com/dbt-labs/arrow-adbc?rev=34c0a6f7cd039334683bc0b05b9bc3430e0b7e86#34c0a6f7cd039334683bc0b05b9bc3430e0b7e86"
+dependencies = [
+ "adbc_core",
+ "arrow-array",
+ "arrow-schema",
  "libloading",
+ "toml",
+ "windows-registry",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -475,19 +488,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1795ebc740ea791ffbe6685e0688ab1effec16c2864e0476db40bfdf0c02cb3d"
 
 [[package]]
-name = "bigdecimal"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a22f228ab7a1b23027ccc6c350b72868017af7ea8356fbdf19f8d991c690013"
-dependencies = [
- "autocfg",
- "libm",
- "num-bigint",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -528,15 +528,6 @@ name = "bitflags"
 version = "2.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
-
-[[package]]
-name = "blake2"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
-dependencies = [
- "digest",
-]
 
 [[package]]
 name = "blake3"
@@ -1091,70 +1082,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datafusion"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "arrow-array",
- "arrow-ipc",
- "arrow-schema",
- "async-trait",
- "bytes",
- "chrono",
- "datafusion-catalog",
- "datafusion-common",
- "datafusion-common-runtime",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-functions",
- "datafusion-functions-aggregate",
- "datafusion-functions-nested",
- "datafusion-functions-table",
- "datafusion-functions-window",
- "datafusion-optimizer",
- "datafusion-physical-expr",
- "datafusion-physical-expr-common",
- "datafusion-physical-optimizer",
- "datafusion-physical-plan",
- "datafusion-sql",
- "futures",
- "glob",
- "itertools 0.14.0",
- "log",
- "object_store",
- "parking_lot 0.12.4",
- "parquet",
- "rand 0.8.5",
- "regex",
- "sqlparser",
- "tempfile",
- "tokio",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "datafusion-catalog"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "async-trait",
- "dashmap",
- "datafusion-common",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-physical-plan",
- "datafusion-sql",
- "futures",
- "itertools 0.14.0",
- "log",
- "parking_lot 0.12.4",
- "sqlparser",
-]
-
-[[package]]
 name = "datafusion-common"
 version = "45.0.0"
 source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
@@ -1180,36 +1107,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "datafusion-common-runtime"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "log",
- "tokio",
-]
-
-[[package]]
 name = "datafusion-doc"
 version = "45.0.0"
 source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-
-[[package]]
-name = "datafusion-execution"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "dashmap",
- "datafusion-common",
- "datafusion-expr",
- "futures",
- "log",
- "object_store",
- "parking_lot 0.12.4",
- "rand 0.8.5",
- "tempfile",
- "url",
-]
 
 [[package]]
 name = "datafusion-expr"
@@ -1242,57 +1142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datafusion-functions"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "arrow-buffer",
- "base64",
- "blake2",
- "blake3",
- "chrono",
- "datafusion-common",
- "datafusion-doc",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-expr-common",
- "datafusion-macros",
- "hashbrown 0.14.5",
- "hex",
- "itertools 0.14.0",
- "log",
- "md-5",
- "rand 0.8.5",
- "regex",
- "sha2",
- "unicode-segmentation",
- "uuid",
-]
-
-[[package]]
-name = "datafusion-functions-aggregate"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "ahash",
- "arrow",
- "arrow-buffer",
- "arrow-schema",
- "datafusion-common",
- "datafusion-doc",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-functions-aggregate-common",
- "datafusion-macros",
- "datafusion-physical-expr",
- "datafusion-physical-expr-common",
- "half",
- "log",
- "paste",
-]
-
-[[package]]
 name = "datafusion-functions-aggregate-common"
 version = "45.0.0"
 source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
@@ -1305,117 +1154,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "datafusion-functions-nested"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "arrow-array",
- "arrow-buffer",
- "arrow-ord",
- "arrow-schema",
- "datafusion-common",
- "datafusion-doc",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-functions",
- "datafusion-functions-aggregate",
- "datafusion-macros",
- "datafusion-physical-expr-common",
- "itertools 0.14.0",
- "log",
- "paste",
-]
-
-[[package]]
-name = "datafusion-functions-table"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "async-trait",
- "datafusion-catalog",
- "datafusion-common",
- "datafusion-expr",
- "datafusion-physical-plan",
- "parking_lot 0.12.4",
- "paste",
-]
-
-[[package]]
-name = "datafusion-functions-window"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "datafusion-common",
- "datafusion-doc",
- "datafusion-expr",
- "datafusion-functions-window-common",
- "datafusion-macros",
- "datafusion-physical-expr",
- "datafusion-physical-expr-common",
- "log",
- "paste",
-]
-
-[[package]]
 name = "datafusion-functions-window-common"
 version = "45.0.0"
 source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
 dependencies = [
  "datafusion-common",
  "datafusion-physical-expr-common",
-]
-
-[[package]]
-name = "datafusion-macros"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "datafusion-expr",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "datafusion-optimizer"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "chrono",
- "datafusion-common",
- "datafusion-expr",
- "datafusion-physical-expr",
- "indexmap 2.11.0",
- "itertools 0.14.0",
- "log",
- "regex",
- "regex-syntax 0.8.6",
-]
-
-[[package]]
-name = "datafusion-physical-expr"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "ahash",
- "arrow",
- "arrow-array",
- "arrow-buffer",
- "arrow-schema",
- "datafusion-common",
- "datafusion-expr",
- "datafusion-expr-common",
- "datafusion-functions-aggregate-common",
- "datafusion-physical-expr-common",
- "half",
- "hashbrown 0.14.5",
- "indexmap 2.11.0",
- "itertools 0.14.0",
- "log",
- "paste",
- "petgraph",
 ]
 
 [[package]]
@@ -1433,74 +1177,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datafusion-physical-optimizer"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "arrow-schema",
- "datafusion-common",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-expr-common",
- "datafusion-physical-expr",
- "datafusion-physical-expr-common",
- "datafusion-physical-plan",
- "futures",
- "itertools 0.14.0",
- "log",
- "url",
-]
-
-[[package]]
-name = "datafusion-physical-plan"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "ahash",
- "arrow",
- "arrow-array",
- "arrow-buffer",
- "arrow-ord",
- "arrow-schema",
- "async-trait",
- "chrono",
- "datafusion-common",
- "datafusion-common-runtime",
- "datafusion-execution",
- "datafusion-expr",
- "datafusion-functions-window-common",
- "datafusion-physical-expr",
- "datafusion-physical-expr-common",
- "futures",
- "half",
- "hashbrown 0.14.5",
- "indexmap 2.11.0",
- "itertools 0.14.0",
- "log",
- "parking_lot 0.12.4",
- "pin-project-lite",
- "tokio",
-]
-
-[[package]]
-name = "datafusion-sql"
-version = "45.0.0"
-source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
-dependencies = [
- "arrow",
- "arrow-array",
- "arrow-schema",
- "bigdecimal",
- "datafusion-common",
- "datafusion-expr",
- "indexmap 2.11.0",
- "log",
- "regex",
- "sqlparser",
-]
-
-[[package]]
 name = "dbt-adapter-proc-macros"
 version = "2.10.2"
 dependencies = [
@@ -1510,11 +1186,12 @@ dependencies = [
 
 [[package]]
 name = "dbt-agate"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "arrow",
  "arrow-array",
  "arrow-buffer",
+ "arrow-csv",
  "arrow-data",
  "arrow-schema",
  "chrono",
@@ -1525,7 +1202,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-auth"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "adbc_core",
  "arrow-schema",
@@ -1541,16 +1218,18 @@ dependencies = [
  "serde",
  "serde_json",
  "shellexpand",
+ "strum",
+ "strum_macros",
  "tokio",
 ]
 
 [[package]]
 name = "dbt-cancel"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 
 [[package]]
 name = "dbt-cloud-api"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "reqwest",
  "serde",
@@ -1562,18 +1241,18 @@ dependencies = [
 
 [[package]]
 name = "dbt-common"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "arc-swap",
  "arrow",
  "arrow-schema",
+ "bytes",
  "chrono",
  "clap",
  "comfy-table",
  "console",
  "counter",
  "dashmap",
- "datafusion",
  "dbt-cancel",
  "dbt-error",
  "dbt-frontend-common",
@@ -1598,6 +1277,7 @@ dependencies = [
  "pathdiff",
  "powershell_script",
  "prost 0.14.1",
+ "rand 0.9.2",
  "regex",
  "rust-embed",
  "schemars 0.8.22",
@@ -1616,7 +1296,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-dag"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "dbt-common",
  "dbt-schemas",
@@ -1627,7 +1307,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-deps"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "dbt-common",
  "dbt-jinja-utils",
@@ -1652,13 +1332,15 @@ dependencies = [
 
 [[package]]
 name = "dbt-env"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 
 [[package]]
 name = "dbt-error"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
- "datafusion",
+ "arrow",
+ "datafusion-common",
+ "datafusion-expr",
  "dbt-cancel",
  "dbt-frontend-common",
  "dbt-proc-macros",
@@ -1667,6 +1349,7 @@ dependencies = [
  "int-enum",
  "itertools 0.13.0",
  "minijinja",
+ "parquet",
  "pathdiff",
  "regex",
  "schemars 0.8.22",
@@ -1677,13 +1360,14 @@ dependencies = [
 
 [[package]]
 name = "dbt-frontend-common"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "antlr-rust",
  "arrow",
  "arrow-schema",
  "counter",
- "datafusion",
+ "datafusion-common",
+ "datafusion-expr",
  "dbt-ident",
  "enum-map",
  "int-enum",
@@ -1699,7 +1383,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-fusion-adapter"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "adbc_core",
  "arrow",
@@ -1731,7 +1415,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-ident"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "serde",
  "ustr",
@@ -1739,7 +1423,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-init"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "chrono",
  "clap",
@@ -1749,12 +1433,16 @@ dependencies = [
  "dbt-common",
  "dbt-error",
  "dbt-frontend-common",
+ "dbt-jinja-utils",
+ "dbt-loader",
  "dbt-proc-macros",
+ "dbt-schemas",
  "dbt-serde_yaml",
  "dbt-telemetry",
  "dialoguer",
  "dirs 5.0.1",
  "log",
+ "merge",
  "prost 0.14.1",
  "regex",
  "reqwest",
@@ -1770,8 +1458,10 @@ dependencies = [
 
 [[package]]
 name = "dbt-jinja-utils"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
+ "arrow",
+ "arrow-csv",
  "chrono",
  "chrono-tz",
  "dashmap",
@@ -1797,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-loader"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1824,7 +1514,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-parser"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1851,7 +1541,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-proc-macros"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "quote",
  "syn",
@@ -1859,7 +1549,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-sa-cli"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "chrono",
  "clap",
@@ -1885,7 +1575,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-schemas"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "blake3",
  "chrono",
@@ -1915,7 +1605,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-selector-parser"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "dbt-common",
  "dbt-schemas",
@@ -1961,7 +1651,7 @@ dependencies = [
 
 [[package]]
 name = "dbt-telemetry"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "arrow",
  "dbt-serde_yaml",
@@ -1975,11 +1665,12 @@ dependencies = [
  "serde_with",
  "strum",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
 name = "dbt-test-containers"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "bollard",
  "clap",
@@ -1997,11 +1688,11 @@ dependencies = [
 
 [[package]]
 name = "dbt-test-primitives"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 
 [[package]]
 name = "dbt-test-utils"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "arrow",
  "async-trait",
@@ -2017,6 +1708,7 @@ dependencies = [
  "diffy",
  "dirs 5.0.1",
  "dotenv",
+ "futures",
  "ignore",
  "itertools 0.13.0",
  "libc",
@@ -2036,9 +1728,10 @@ dependencies = [
 
 [[package]]
 name = "dbt-xdbc"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "adbc_core",
+ "adbc_driver_manager",
  "arrow-array",
  "arrow-schema",
  "atomic-wait",
@@ -2134,7 +1827,6 @@ dependencies = [
  "block-buffer",
  "const-oid",
  "crypto-common",
- "subtle",
 ]
 
 [[package]]
@@ -2545,12 +2237,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "glob"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "globset"
@@ -5025,6 +4711,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_spanned"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40734c41988f7306bb04f0ecf60ec0f3f1caa34290e4e8ea471dcd3346483b83"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5748,6 +5443,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "toml"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75129e1dc5000bfbaa9fee9d1b21f974f9fbad9daec557a521ee6e080825f6e8"
+dependencies = [
+ "serde_spanned",
+ "toml_datetime",
+ "toml_parser",
+ "toml_writer",
+ "winnow",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bade1c3e902f58d73d3f294cd7f20391c1cb2fbcb643b73566bc773971df91e3"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml_parser"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b551886f449aa90d4fe2bdaa9f4a2577ad2dde302c61ecf262d80b116db95c10"
+dependencies = [
+ "winnow",
+]
+
+[[package]]
+name = "toml_writer"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
+
+[[package]]
 name = "tonic"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6165,7 +5897,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vortex-client"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "dbt-env",
  "http",
@@ -6182,7 +5914,7 @@ dependencies = [
 
 [[package]]
 name = "vortex-events"
-version = "2.0.0-preview.6"
+version = "2.0.0-preview.7"
 dependencies = [
  "dashmap",
  "dbt-common",
@@ -6811,6 +6543,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
+name = "winnow"
+version = "0.7.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21a0236b59786fed61e2a80582dd500fe61f18b5dca67a4a067d0bc9039339cf"
+
+[[package]]
 name = "wit-bindgen-rt"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6978,3 +6716,43 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "datafusion"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-catalog"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-functions"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-functions-aggregate"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-functions-nested"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-functions-window"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-physical-expr"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"
+
+[[patch.unused]]
+name = "datafusion-physical-plan"
+version = "45.0.0"
+source = "git+https://github.com/sdf-labs/datafusion?rev=1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354#1d8fe1ebabbd0dbfe41d57b03fbf60bd49f5b354"

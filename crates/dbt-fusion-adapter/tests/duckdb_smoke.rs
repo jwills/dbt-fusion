@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+    
 use std::sync::Arc;
 
 use dbt_auth::AdapterConfig;
@@ -16,9 +16,9 @@ fn duckdb_smoke_select_1() {
         return;
     }
 
-    // Minimal in-memory DuckDB configuration
-    let cfg = HashMap::new();
-    let adapter_cfg = AdapterConfig::new(cfg);
+        // Minimal in-memory DuckDB configuration
+        let cfg = dbt_serde_yaml::Mapping::new();
+        let adapter_cfg = AdapterConfig::new(cfg);
 
     // Build engine using DuckDB auth
     let auth = dbt_auth::auth_for_backend(Backend::DuckDb);
@@ -36,4 +36,3 @@ fn duckdb_smoke_select_1() {
 
     assert_eq!(table.num_rows(), 1);
 }
-

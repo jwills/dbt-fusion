@@ -22,16 +22,17 @@ use std::sync::Arc;
 /// Used to identify the specific database adapter being used.
 pub type AdapterType = dbt_common::adapter::AdapterType;
 
-pub fn backend_of(adapter_type: AdapterType) -> Backend {
-    match adapter_type {
-        AdapterType::Postgres => Backend::Postgres,
-        AdapterType::Snowflake => Backend::Snowflake,
-        AdapterType::Bigquery => Backend::BigQuery,
-        AdapterType::Databricks => Backend::Databricks,
-        AdapterType::Redshift => Backend::Redshift,
-        AdapterType::Salesforce => Backend::Salesforce,
+    pub fn backend_of(adapter_type: AdapterType) -> Backend {
+        match adapter_type {
+            AdapterType::Postgres => Backend::Postgres,
+            AdapterType::Snowflake => Backend::Snowflake,
+            AdapterType::Bigquery => Backend::BigQuery,
+            AdapterType::Databricks => Backend::Databricks,
+            AdapterType::Redshift => Backend::Redshift,
+            AdapterType::Salesforce => Backend::Salesforce,
+            AdapterType::Duckdb => Backend::DuckDb,
+        }
     }
-}
 
 /// Type queries to be implemented for every [BaseAdapter]
 pub trait AdapterTyping {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+    use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ fn duckdb_macro_create_table_executes() {
 
     // Adapter + bridge
     let auth = dbt_auth::auth_for_backend(Backend::DuckDb);
-    let cfg = AdapterConfig::new(HashMap::new());
+        let cfg = AdapterConfig::new(dbt_serde_yaml::Mapping::new());
     let token = dbt_common::cancellation::CancellationToken::never_cancels();
     let engine = SqlEngine::new(Arc::from(auth), cfg, token);
     let quoting = ResolvedQuoting { database: false, schema: false, identifier: false };
@@ -43,13 +43,13 @@ fn duckdb_macro_create_table_executes() {
     let bridge = Arc::new(BridgeAdapter::new(typed.clone(), None, cache));
 
     // Relation for target table
-    let relation = create_relation(
-        typed.adapter_type().to_string(),
-        "".to_string(),
-        "main".to_string(),
-        Some("t_create_macro".to_string()),
-        None,
-        typed.quoting(),
+        let relation = create_relation(
+            typed.adapter_type(),
+            "".to_string(),
+            "main".to_string(),
+            Some("t_create_macro".to_string()),
+            None,
+            typed.quoting(),
     ).expect("relation");
 
     // Build Jinja env: adapter, dialect, macro template, namespace mapping

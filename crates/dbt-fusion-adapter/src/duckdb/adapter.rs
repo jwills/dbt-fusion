@@ -1,6 +1,6 @@
 use crate::AdapterType;
 use crate::errors::{AdapterError, AdapterErrorKind, AdapterResult};
-use crate::relation_object::create_relation;
+    
 use crate::duckdb::relation::DuckdbRelation;
 use crate::sql_engine::SqlEngine;
 use crate::typed_adapter::TypedBaseAdapter;
@@ -15,7 +15,7 @@ use dbt_schemas::schemas::columns::base::{BaseColumn, StdColumn};
 use dbt_schemas::schemas::common::ResolvedQuoting;
 use dbt_schemas::schemas::relations::base::BaseRelation;
 use dbt_xdbc::{Connection, QueryCtx};
-use minijinja::Value;
+    use minijinja::{State, Value};
 
 use std::fmt;
 use std::sync::Arc;
@@ -28,20 +28,42 @@ pub struct DuckdbAdapter {
     db: Option<Arc<dyn SchemaRegistry>>,
 }
 
-impl DuckdbAdapter {
-    pub fn new(engine: Arc<SqlEngine>, quoting: ResolvedQuoting, db: Option<Arc<dyn SchemaRegistry>>) -> Self {
-        Self { engine, quoting, db }
-    }
+    impl DuckdbAdapter {
+        pub fn new(engine: Arc<SqlEngine>, quoting: ResolvedQuoting, db: Option<Arc<dyn SchemaRegistry>>) -> Self {
+            Self { engine, quoting, db }
+        }
 
     fn dialect(&self) -> Dialect {
         Dialect::from(AdapterType::Duckdb)
     }
 
-    fn quote_ident(&self, ident: &str) -> String {
-        let escaped = ident.replace('"', "\"\"");
-        format!("\"{}\"", escaped)
+        fn quote_ident(&self, ident: &str) -> String {
+            let escaped = ident.replace('"', "\"\"");
+            format!("\"{}\"", escaped)
+        }
+
+        #[inline]
+        fn map_arrow_to_duckdb(data_type: &DataType) -> String {
+            let t = match data_type {
+                DataType::Null => "INTEGER",
+                DataType::Boolean => "BOOLEAN",
+                DataType::Int8 | DataType::Int16 | DataType::Int32 => "INTEGER",
+                DataType::Int64 => "BIGINT",
+                DataType::UInt8 | DataType::UInt16 | DataType::UInt32 => "INTEGER",
+                DataType::UInt64 => "UBIGINT",
+                DataType::Float16 | DataType::Float32 => "REAL",
+                DataType::Float64 => "DOUBLE",
+                DataType::Utf8 | DataType::LargeUtf8 => "TEXT",
+                DataType::Binary | DataType::LargeBinary => "BLOB",
+                DataType::Timestamp(_, _) => "TIMESTAMP",
+                DataType::Date32 | DataType::Date64 => "DATE",
+                DataType::Decimal128(_, _) | DataType::Decimal256(_, _) => "DECIMAL",
+                _ => "TEXT",
+            };
+            t.to_string()
+        }
+
     }
-}
 
 impl fmt::Debug for DuckdbAdapter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -131,10 +153,10 @@ impl TypedBaseAdapter for DuckdbAdapter {
             return Ok(vec![]);
         }
         let col = result.column(0);
-        let arr = col
-            .as_any()
-            .downcast_ref::<arrow::array::StringArray>()
-            .ok_or_else(|| AdapterError::new(AdapterErrorKind::Internal, "unexpected list_schemas result type"))?;
+            let arr = col
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .ok_or_else(|| AdapterError::new(AdapterErrorKind::Internal, "unexpected list_schemas result type"))?;
         let mut out = Vec::with_capacity(arr.len());
         for i in 0..arr.len() {
             if arr.is_null(i) { continue; }
@@ -192,11 +214,11 @@ impl TypedBaseAdapter for DuckdbAdapter {
         }
     }
 
-    fn get_columns_in_relation(
-        &self,
-        _state: &minijinja::State,
-        relation: Arc<dyn BaseRelation>,
-    ) -> AdapterResult<Vec<Box<dyn BaseColumn>>> {
+        fn get_columns_in_relation(
+            &self,
+            state: &State,
+            relation: Arc<dyn BaseRelation>,
+        ) -> AdapterResult<Vec<Box<dyn BaseColumn>>> {
         let fqn = relation.render_self_as_str();
         let sql = format!("select * from {} limit 0", fqn);
         let mut conn = self.new_connection(None)?;
@@ -204,50 +226,35 @@ impl TypedBaseAdapter for DuckdbAdapter {
         let batch = self.engine.execute(&mut *conn, &ctx)?;
         let schema = batch.schema();
         let mut out: Vec<Box<dyn BaseColumn>> = Vec::with_capacity(schema.fields().len());
-        for field in schema.fields() {
-            let db_type = self.convert_type_inner(field.data_type())?;
-            let col = StdColumn { name: field.name().clone(), dtype: db_type, char_size: None, numeric_precision: None, numeric_scale: None };
-            out.push(Box::new(col));
+            for field in schema.fields() {
+                let db_type = self.convert_type_inner(state, field.data_type())?;
+                let col = StdColumn { name: field.name().clone(), dtype: db_type, char_size: None, numeric_precision: None, numeric_scale: None };
+                out.push(Box::new(col));
+            }
+            Ok(out)
         }
-        Ok(out)
-    }
 
-    fn arrow_schema_to_dbt_columns(
-        &self,
-        schema: Arc<arrow_schema::Schema>,
-    ) -> AdapterResult<Vec<Arc<dyn BaseColumn>>> {
-        let mut out: Vec<Arc<dyn BaseColumn>> = Vec::with_capacity(schema.fields().len());
-        for field in schema.fields() {
-            let name = field.name().clone();
-            let dtype = field.data_type();
-            let db_type = self.convert_type_inner(dtype)?;
-            let col = StdColumn { name, dtype: db_type, char_size: None, numeric_precision: None, numeric_scale: None };
-            out.push(Arc::new(col));
+        fn arrow_schema_to_dbt_columns(
+            &self,
+            schema: Arc<arrow_schema::Schema>,
+        ) -> AdapterResult<Vec<Arc<dyn BaseColumn>>> {
+            let mut out: Vec<Arc<dyn BaseColumn>> = Vec::with_capacity(schema.fields().len());
+            for field in schema.fields() {
+                let name = field.name().clone();
+                let dtype = field.data_type();
+                let db_type = Self::map_arrow_to_duckdb(dtype);
+                let col = StdColumn { name, dtype: db_type, char_size: None, numeric_precision: None, numeric_scale: None };
+                out.push(Arc::new(col));
+            }
+            Ok(out)
         }
-        Ok(out)
-    }
 
     fn get_resolved_quoting(&self) -> ResolvedQuoting { self.quoting }
 
-    fn convert_type_inner(&self, data_type: &DataType) -> AdapterResult<String> {
-        let t = match data_type {
-            DataType::Null => "INTEGER",
-            DataType::Boolean => "BOOLEAN",
-            DataType::Int8 | DataType::Int16 | DataType::Int32 => "INTEGER",
-            DataType::Int64 => "BIGINT",
-            DataType::UInt8 | DataType::UInt16 | DataType::UInt32 => "INTEGER",
-            DataType::UInt64 => "UBIGINT",
-            DataType::Float16 | DataType::Float32 => "REAL",
-            DataType::Float64 => "DOUBLE",
-            DataType::Utf8 | DataType::LargeUtf8 => "TEXT",
-            DataType::Binary | DataType::LargeBinary => "BLOB",
-            DataType::Timestamp(_, _) => "TIMESTAMP",
-            DataType::Date32 | DataType::Date64 => "DATE",
-            DataType::Decimal128(_, _) | DataType::Decimal256(_, _) => "DECIMAL",
-            _ => "TEXT",
-        };
-        Ok(t.to_string())
-    }
+        fn convert_type_inner(&self, _state: &State, data_type: &DataType) -> AdapterResult<String> {
+            Ok(Self::map_arrow_to_duckdb(data_type))
+        }
+
 
     fn get_column_schema_from_query(
         &self,
@@ -262,7 +269,7 @@ impl TypedBaseAdapter for DuckdbAdapter {
         let schema = batch.schema();
         let mut out: Vec<Box<dyn BaseColumn>> = Vec::with_capacity(schema.fields().len());
         for field in schema.fields() {
-            let db_type = self.convert_type_inner(field.data_type())?;
+            let db_type = Self::map_arrow_to_duckdb(field.data_type());
             let col = StdColumn { name: field.name().clone(), dtype: db_type, char_size: None, numeric_precision: None, numeric_scale: None };
             out.push(Box::new(col));
         }
